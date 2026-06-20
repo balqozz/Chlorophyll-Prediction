@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Log Matrix Report | ChlorophyllAI</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --primary-color: #0f5132;
+    }
+    body {
+      background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+      font-family: 'Segoe UI', sans-serif;
+      min-height: 100vh;
+    }
+    .navbar {
+      background-color: var(--primary-color) !important;
+    }
+    .navbar-brand, .nav-link {
+      color: #ffffff !important;
+    }
+    .main-card {
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+      padding: 30px;
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="navbar navbar-expand-lg navbar-dark">
+    <div class="container">
+      <a class="navbar-brand fw-bold" href="/"><i class="fa-solid fa-leaf me-2"></i>ChlorophyllAI</a>
+      <div class="navbar-nav ms-auto flex-row">
+        <a class="nav-link me-3" href="/">Dashboard</a>
+        <a class="nav-link me-3" href="/prediksi">Analysis</a>
+        <a class="nav-link active" href="/history">History</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mb-5">
+    <div class="main-card">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="fw-bold text-success mb-0"><i class="fa-solid fa-paste me-2"></i>Analytical Archive Report</h3>
+        <a href="/history" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-arrow-left me-1"></i>Back to Records</a>
+      </div>
+
+      <div class="row g-3 mb-4 bg-light p-3 rounded border">
+        <div class="col-md-4"><strong>Log Source File:</strong> <span class="text-dark">{{ history.filename }}</span></div>
+        <div class="col-md-4"><strong>Algorithm Configuration:</strong> <span class="badge bg-success text-uppercase">{{ history.method.replace('_', ' ') }}</span></div>
+        <div class="col-md-4"><strong>Timestamp Logged:</strong> <span class="text-muted">{{ history.timestamp }}</span></div>
+      </div>
+
+      <h5 class="fw-bold mb-3 text-secondary">Historical Feature & Output Array</h5>
+      <div class="table-responsive border rounded shadow-sm" style="max-height: 500px;">
+        <table class="table table-striped table-hover align-middle text-center mb-0">
+          <thead class="table-success sticky-top">
+            <tr>
+              <th>#</th>
+              <th>R</th><th>G</th><th>B</th><th>ExG</th>
+              {% if history.results[0].get('IR_Intensity (%)') is not none %}<th>IR (%)</th>{% endif %}
+              <th class="table-primary">Est. Chl a (mg/L)</th>
+              <th class="table-warning">Est. Chl b (mg/L)</th>
+              <th class="table-success">Est. Total Chlorophyll (mg/L)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in history.results %}
+              <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ "%.1f"|format(row['R']) if row.get('R') is not none else '-' }}</td>
+                <td>{{ "%.1f"|format(row['G']) if row.get('G') is not none else '-' }}</td>
+                <td>{{ "%.1f"|format(row['B']) if row.get('B') is not none else '-' }}</td>
+                <td>{{ "%.2f"|format(row['Excess_Green']) if row.get('Excess_Green') is not none else '-' }}</td>
+                {% if row.get('IR_Intensity (%)') is not none %}
+                  <td class="text-success fw-bold">{{ "%.1f"|format(row['IR_Intensity (%)']) }}</td>
+                {% endif %}
+                <td class="table-primary text-danger fw-bold">{{ "%.4f"|format(row['Prediksi_Total_Klorofil'] * 0.37) }}</td>
+                <td class="table-warning text-dark fw-bold">{{ "%.4f"|format(row['Prediksi_Total_Klorofil'] * 0.63) }}</td>
+                <td class="table-success fw-bold text-success">{{ "%.4f"|format(row['Prediksi_Total_Klorofil']) }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
