@@ -3,31 +3,50 @@ import joblib
 import pandas as pd
 import numpy as np
 import re
+import sqlite3  # <--Tambahkan library SQLite
+import json     # Untuk menyimpan data array grafik ke database dalam bentuk string teks
 from flask import Flask, request, render_template, abort
 from datetime import datetime
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = './uploads'
+DB_NAME = 'skripsi_online.db'  # <-- Nama file database kamu
 
-# Pastikan folder uploads ada agar tidak error saat save file
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
 
-# Variabel global untuk menampung riwayat analisis selama aplikasi berjalan
-app.history = []
+# --- 1. FUNGSI INISIALISASI DATABASE SQLite ---
+def init_db():
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    # Membuat tabel history jika belum ada
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            filename TEXT,
+            method TEXT,
+            timestamp TEXT,
+            chart_data_total TEXT,
+            chart_data_a TEXT,
+            chart_data_b TEXT,
+            results TEXT
+        )
+    ''')
+    conn.commit()
+    conn.close()
 
-# 1. FUNGSI LOAD MODEL
+# Jalankan inisialisasi tabel saat web pertama kali di-run
+init_db()
+
 def load_my_model(method):
     if method == 'xgboost':
         return joblib.load('model_xgb.pkl')
     return joblib.load('model_rf.pkl') 
 
-# 2. ROUTE HALAMAN UTAMA (DASHBOARD)
 @app.route('/')
 def dashboard():
     return render_template('dashboard.html')
 
-# 3. ROUTE ANALISIS DAN PREDIKSI
 @app.route('/prediksi', methods=['GET', 'POST'])
 def prediksi():
     method = request.form.get('method') or request.args.get('method') or 'random_forest'
@@ -38,7 +57,6 @@ def prediksi():
     filename = ""
     manual_inputs = None
 
-    # Penjelasan konstanta Rumus Arnon (Aseton 80%) sebagai informasi pendukung ilmiah di web
     arnon_info = {
         'rumus_a': 'Chl a = 12.7 * A663 - 2.69 * A645',
         'rumus_b': 'Chl b = 22.9 * A645 - 4.68 * A663',
@@ -57,14 +75,12 @@ def prediksi():
 
             try:
                 df_raw = pd.read_excel(filepath)
-                
                 if len(df_raw) == 0:
                     raise ValueError("File Excel kosong, tidak ada data untuk diproses.")
 
                 first_col = df_raw.columns[0]
                 first_val = str(df_raw[first_col].iloc[0])
                 
-                # Cek jika Excel menggunakan format string teks alat langsung (R=... G=... B=...)
                 if 'R=' in first_val or 'R=' in str(first_col):
                     parsed_data = []
                     all_lines = []
@@ -97,7 +113,6 @@ def prediksi():
                     df = pd.DataFrame(parsed_data)
                 
                 else:
-                    # Jalur Excel Biasa (Kolom R, G, B Terpisah)
                     df = df_raw.copy()
                     df.columns = [str(c).strip() for c in df.columns]
                     
@@ -126,13 +141,11 @@ def prediksi():
                     if 'IR_Intensity (%)' not in df.columns:
                         df['IR_Intensity (%)'] = 78.5062
 
-                # --- HITUNG PARAMETER SPEKTRAL OTOMATIS ---
                 df['Excess_Green'] = (2 * df['g']) - df['r'] - df['b']
                 df['IR_to_R'] = df['IR_Intensity (%)'] / (df['r'] + 1e-5)
                 df['IR_to_G'] = df['IR_Intensity (%)'] / (df['g'] + 1e-5)
                 df['IR_to_B'] = df['IR_Intensity (%)'] / (df['b'] + 1e-5)
 
-                # --- PREDIKSI MODEL & DEKOMPOSISI ---
                 model = load_my_model(method)
                 features = ['r', 'g', 'b', 'Excess_Green', 'IR_Intensity (%)', 'IR_to_R', 'IR_to_G', 'IR_to_B']
                 
@@ -141,7 +154,6 @@ def prediksi():
                 df['Prediksi_Klorofil_A'] = total_klorofil_pred * 0.7205
                 df['Prediksi_Klorofil_B'] = total_klorofil_pred * 0.2795
 
-                # Simulasi Sebaran Data Aktual Ilmiah berdasarkan acuan Rumus Arnon
                 np.random.seed(42)
                 noise = np.random.normal(0, 0.4, size=len(total_klorofil_pred))
                 
@@ -153,7 +165,6 @@ def prediksi():
                 df['Aktual_Klorofil_A'] = df['Aktual_Total_Klorofil'] * 0.7205
                 df['Aktual_Klorofil_B'] = df['Aktual_Total_Klorofil'] * 0.2795
 
-                # Masukkan data ke array grafik masing-masing
                 for idx, row in df.iterrows():
                     chart_data_total.append({'x': round(float(row['Aktual_Total_Klorofil']), 3), 'y': round(float(row['Prediksi_Total_Klorofil']), 3)})
                     chart_data_a.append({'x': round(float(row['Aktual_Klorofil_A']), 3), 'y': round(float(row['Prediksi_Klorofil_A']), 3)})
@@ -161,15 +172,16 @@ def prediksi():
 
                 pred_results = df.to_dict(orient='records')
                 
-                app.history.append({
-                    'filename': filename,
-                    'method': method,
-                    'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                    'results': pred_results,
-                    'chart_data_total': chart_data_total,
-                    'chart_data_a': chart_data_a,
-                    'chart_data_b': chart_data_b
-                })
+                # --- 2. JALUR SQLite: SIMPAN REKORD BARU ---
+                conn = sqlite3.connect(DB_NAME)
+                cursor = conn.cursor()
+                cursor.execute('''
+                    INSERT INTO history (filename, method, timestamp, chart_data_total, chart_data_a, chart_data_b, results)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                ''', (filename, method, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 
+                      json.dumps(chart_data_total), json.dumps(chart_data_a), json.dumps(chart_data_b), json.dumps(pred_results)))
+                conn.commit()
+                conn.close()
 
             except Exception as e:
                 pred_results = [{"error": f"Gagal memproses file Excel: {str(e)}"}]
@@ -212,14 +224,17 @@ def prediksi():
 
                 pred_results = df_manual.to_dict(orient='records')
                 
-                app.history.append({
-                    'filename': 'Manual Input', 'method': method,
-                    'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                    'results': pred_results,
-                    'chart_data_total': chart_data_total,
-                    'chart_data_a': chart_data_a,
-                    'chart_data_b': chart_data_b
-                })
+                # --- JALUR SQLite: SIMPAN MANUAL INPUT ---
+                conn = sqlite3.connect(DB_NAME)
+                cursor = conn.cursor()
+                cursor.execute('''
+                    INSERT INTO history (filename, method, timestamp, chart_data_total, chart_data_a, chart_data_b, results)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                ''', (filename, method, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 
+                      json.dumps(chart_data_total), json.dumps(chart_data_a), json.dumps(chart_data_b), json.dumps(pred_results)))
+                conn.commit()
+                conn.close()
+
                 manual_inputs = {'R': r_val, 'G': g_val, 'B': b_val, 'IR': ir_val}
             except Exception as e:
                 pred_results = [{"error": f"Failed to process manual inputs: {str(e)}"}]
@@ -228,15 +243,48 @@ def prediksi():
     return render_template('index.html', results=pred_results, method=method, filename=filename, manual_inputs=manual_inputs, 
                            chart_data_total=chart_data_total, chart_data_a=chart_data_a, chart_data_b=chart_data_b, arnon_info=arnon_info)
 
+# --- 3. JALUR SQLite: AMBIL SEMUA DAFTAR RIWAYAT ---
 @app.route('/history')
 def history():
-    return render_template('history.html', history=app.history)
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute('SELECT id, filename, method, timestamp FROM history ORDER BY id DESC')
+    rows = cursor.fetchall()
+    conn.close()
+    
+    # Mapping data agar kompatibel dengan template HTML bawaanmu
+    history_list = []
+    for r in rows:
+        history_list.append({
+            'id': r[0],
+            'filename': r[1],
+            'method': r[2],
+            'timestamp': r[3]
+        })
+    return render_template('history.html', history=history_list)
 
+# --- 4. JALUR SQLite: AMBIL DETAIL ARSIP REPORT BERDASARKAN ID ---
 @app.route('/history/<int:entry_id>')
 def history_detail(entry_id):
-    if entry_id < 1 or entry_id > len(app.history):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute('SELECT filename, method, timestamp, chart_data_total, chart_data_a, chart_data_b, results FROM history WHERE id = ?', (entry_id,))
+    row = cursor.fetchone()
+    conn.close()
+    
+    if not row:
         abort(404)
-    return render_template('history_detail.html', history=app.history[entry_id - 1], entry_id=entry_id)
+        
+    detail_data = {
+        'filename': row[0],
+        'method': row[1],
+        'timestamp': row[2],
+        'chart_data_total': json.loads(row[3]),
+        'chart_data_a': json.loads(row[4]),
+        'chart_data_b': json.loads(row[5]),
+        'results': json.loads(row[6])
+    }
+    return render_template('history_detail.html', history=detail_data, entry_id=entry_id)
 
 if __name__ == '__main__':
     app.run(debug=True)
