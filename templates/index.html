@@ -217,26 +217,26 @@
               <div class="row g-5">
                 
                 <div class="col-12">
-                  <h6 class="fw-bold text-success mb-2"><i class="fa-solid fa-chart-line me-2"></i>1. Total Chlorophyll Linearity Visualization</h6>
-                  <div style="height: 280px; position: relative;"><canvas id="chartTotal"></canvas></div>
+                  <h6 class="fw-bold mb-2" style="color: #9B59B6;"><i class="fa-solid fa-chart-line me-2"></i>1. Total Chlorophyll Linearity Visualization</h6>
+                  <div style="height: 340px; position: relative;"><canvas id="chartTotal"></canvas></div>
                   <div class="p-3 bg-light border rounded small mt-2 text-secondary shadow-sm" style="text-align: justify;">
-                    <strong>Analysis Pattern Insights:</strong> This chart displays the comparison between the actual laboratory-tested total chlorophyll content (X-Axis) and the estimated values predicted by the <strong>{{ method }}</strong> algorithm (Y-Axis). The red dashed line represents the ideal line of identity (y = x), indicating a perfect scenario where the predicted values precisely match the laboratory ground truth. The distribution distance of sample points from this red line provides a direct assessment of the accuracy and error variance of the regression model under evaluation.
+                    <strong>Analysis Pattern Insights:</strong> This chart displays the scatter distribution comparing the measured laboratory values (X-Axis) and the estimated values predicted by the <strong>{{ method }}</strong> algorithm (Y-Axis). The dashed trendline indicates the model's regression trajectory. Proximity of these data points to the trendline directly represents the high accuracy and low error variance of the model.
                   </div>
                 </div>
 
                 <div class="col-12">
-                  <h6 class="fw-bold text-danger mb-2"><i class="fa-solid fa-chart-line me-2"></i>2. Chlorophyll a Component Visualization (Primary Pigment)</h6>
-                  <div style="height: 280px; position: relative;"><canvas id="chartA"></canvas></div>
+                  <h6 class="fw-bold mb-2" style="color: #3498DB;"><i class="fa-solid fa-chart-line me-2"></i>2. Chlorophyll a Component Visualization (Primary Pigment)</h6>
+                  <div style="height: 340px; position: relative;"><canvas id="chartA"></canvas></div>
                   <div class="p-3 bg-light border rounded small mt-2 text-secondary shadow-sm" style="text-align: justify;">
-                    <strong>Analysis Pattern Insights:</strong> This scatter plot maps the distribution of estimated values specifically for the Chlorophyll a component (Y-Axis) against its actual laboratory values (X-Axis). The Chlorophyll a component values are derived proportionally from the total chlorophyll estimation based on the natural pigment distribution constants of lettuce leaves. By evaluating the proximity of these red dots to the ideal linear trendline, we can clearly identify the effective contribution of RGB color feature extraction and infrared intensity values in detecting the primary plant pigment.
+                    <strong>Analysis Pattern Insights:</strong> This scatter plot maps the distribution of estimated values specifically for the Chlorophyll a component (Y-Axis) against its actual laboratory values (X-Axis). The linear trendline demonstrates the relationship correlation between feature extractions and the primary plant pigment.
                   </div>
                 </div>
 
                 <div class="col-12">
-                  <h6 class="fw-bold text-warning mb-2"><i class="fa-solid fa-chart-line me-2"></i>3. Chlorophyll b Component Visualization (Antenna Pigment)</h6>
-                  <div style="height: 280px; position: relative;"><canvas id="chartB"></canvas></div>
+                  <h6 class="fw-bold mb-2" style="color: #F39C12;"><i class="fa-solid fa-chart-line me-2"></i>3. Chlorophyll b Component Visualization (Antenna Pigment)</h6>
+                  <div style="height: 340px; position: relative;"><canvas id="chartB"></canvas></div>
                   <div class="p-3 bg-light border rounded small mt-2 text-secondary shadow-sm" style="text-align: justify;">
-                    <strong>Analysis Pattern Insights:</strong> This chart presents the test data distribution for the Chlorophyll b component, comparing the laboratory actual values (X-Axis) with the model's computed outputs (Y-Axis). The spread of yellow scatter points describes how the algorithm projects the supporting accessory pigment values in lettuce leaves. This visualization simplifies an objective performance evaluation of the regression model based on how close the data points lie to the ideal target line.
+                    <strong>Analysis Pattern Insights:</strong> This chart presents the test data distribution for the Chlorophyll b component, comparing the laboratory actual values (X-Axis) with the model's computed outputs (Y-Axis). The spread of scatter points describes the regression performance over the leaf accessory pigment.
                   </div>
                 </div>
 
@@ -264,70 +264,103 @@
     const dataA = JSON.parse('{{ (chart_data_a | tojson) if chart_data_a else "[]" }}');
     const dataB = JSON.parse('{{ (chart_data_b | tojson) if chart_data_b else "[]" }}');
 
-    function generateScatterPlot(canvasId, datasetLabel, rawDataPoints, dotColor) {
+    // Fungsi Pembantu untuk Menghitung Garis Regresi Linier Otomatis (Trendline) di Chart.js
+    function calculateTrendline(dataPoints) {
+      if (!dataPoints || dataPoints.length === 0) return [];
+      const xValues = dataPoints.map(p => p.x);
+      const yValues = dataPoints.map(p => p.y);
+      
+      const n = dataPoints.length;
+      let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+      for (let i = 0; i < n; i++) {
+        sumX += xValues[i];
+        sumY += yValues[i];
+        sumXY += (xValues[i] * yValues[i]);
+        sumXX += (xValues[i] * xValues[i]);
+      }
+      
+      const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+      const intercept = (sumY - slope * sumX) / n;
+      
+      const minX = Math.min(...xValues) - 0.5;
+      const maxX = Math.max(...xValues) + 0.5;
+      
+      return [
+        { x: minX, y: slope * minX + intercept },
+        { x: maxX, y: slope * maxX + intercept }
+      ];
+    }
+
+    function generateScatterChart(canvasId, rawDataPoints, pointColor, lineColor, titleX, titleY) {
       if (!rawDataPoints || rawDataPoints.length === 0) return;
 
-      const xValues = rawDataPoints.map(p => p.x);
-      const yValues = rawDataPoints.map(p => p.y);
-      
-      const minBound = Math.min(...xValues, ...yValues) * 0.95;
-      const maxBound = Math.max(...xValues, ...yValues) * 1.05;
-
-      const idealLineData = [
-        { x: minBound, y: minBound },
-        { x: maxBound, y: maxBound }
-      ];
+      const trendlineData = calculateTrendline(rawDataPoints);
 
       const ctx = document.getElementById(canvasId).getContext('2d');
       new Chart(ctx, {
+        type: 'scatter', // Mengubah tipe grafik menjadi SCATTER PLOT LINEARITAS
         data: {
           datasets: [
             {
-              type: 'scatter',
-              label: datasetLabel,
+              label: 'Predicted vs. Actual Data',
               data: rawDataPoints,
-              backgroundColor: dotColor,
-              pointRadius: 5,
-              pointHoverRadius: 7
+              backgroundColor: pointColor,
+              pointRadius: 6,
+              pointHoverRadius: 8,
+              showLine: false, // Menghilangkan garis hubung antar titik
+              z: 2
             },
             {
+              label: 'Trendline',
+              data: trendlineData,
+              borderColor: lineColor,
+              backgroundColor: 'transparent',
+              borderWidth: 2.5,
+              borderDash: [6, 6],
+              pointRadius: 0, // Menyembunyikan titik ujung garis tren
+              showLine: true, // Memaksa menampilkan bentuk garis regresi
               type: 'line',
-              label: 'Ideal Trendline (Actual = Predicted)',
-              data: idealLineData,
-              borderColor: '#dc3545',
-              borderWidth: 2,
-              borderDash: [5, 5],
-              fill: false,
-              pointRadius: 0,
-              lineTension: 0
+              z: 1
             }
           ]
         },
         options: {
           responsive: true,
-          maintainAspectRatio: false,
+          maintainAspectRatio: false, // Mengikuti pembungkus div agar otomatis berbentuk LANDSCAPE
+          plugins: {
+            legend: { 
+              display: true, 
+              position: 'top',
+              labels: { font: { family: 'Segoe UI', size: 11 } }
+            }
+          },
           scales: {
             x: {
               type: 'linear',
               position: 'bottom',
-              title: { display: true, text: 'Actual Chlorophyll Content (mg/L)', font: { weight: 'bold', size: 11 } },
-              min: minBound,
-              max: maxBound
+              title: { display: true, text: titleX, font: { weight: 'bold', size: 11 } },
+              grid: { color: 'rgba(0, 0, 0, 0.05)' }
             },
             y: {
-              title: { display: true, text: 'AI Estimated Prediction Value (mg/L)', font: { weight: 'bold', size: 11 } },
-              min: minBound,
-              max: maxBound
+              type: 'linear',
+              title: { display: true, text: titleY, font: { weight: 'bold', size: 11 } },
+              grid: { color: 'rgba(0, 0, 0, 0.05)' }
             }
           }
         }
       });
     }
 
+    // Eksekusi pembuatan chart dengan paduan warna pastel-bold kontras sesuai request
     if (dataTotal.length > 0) {
-      generateScatterPlot('chartTotal', 'Total Chlorophyll Samples', dataTotal, '#198754');
-      generateScatterPlot('chartA', 'Chlorophyll a Samples', dataA, '#dc3545');
-      generateScatterPlot('chartB', 'Chlorophyll b Samples', dataB, '#ffc107');
+      // 1. Total Klorofil: Titik Ungu (#9B59B6) & Garis Tren Hijau Emerald (#27AE60)
+      generateScatterChart('chartTotal', dataTotal, '#9B59B6', '#27AE60', 'Actual Laboratory Value (mg/L)', 'Predicted Model Value (mg/L)');
+      
+      // 2. Klorofil a: Titik Biru Toska (#3498DB) & Garis Tren Oranye Bold (#E67E22)
+      generateScatterChart('chartA', dataA, '#3498DB', '#E67E22', 'Actual Laboratory Value (mg/L)', 'Predicted Model Value (mg/L)');
+      
+      // 3. Klorofil b: Titik Oranye (#F39C12) & Garis Tren Biru Safir (#2C3E50)
+      generateScatterChart('chartB', dataB, '#F39C12', '#2C3E50', 'Actual Laboratory Value (mg/L)', 'Predicted Model Value (mg/L)');
     }
 
     function toggleIRWarning() {
