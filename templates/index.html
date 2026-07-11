@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chlorophyll Analysis | Multisensor System</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --primary-color: #0f5132;
+      --accent-color: #198754;
+      --bg-gradient: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+    }
+    body {
+      background: var(--bg-gradient);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+      color: #212529;
+    }
+    .navbar {
+      background-color: var(--primary-color) !important;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .navbar-brand, .nav-link {
+      color: #ffffff !important;
+    }
+    .nav-link:hover {
+      color: #a3cfbb !important;
+    }
+    .nav-link.active {
+      font-weight: bold;
+      border-bottom: 2px solid #ffffff;
+    }
+    .card-custom {
+      border: none;
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.07);
+    }
+    .btn-success-custom {
+      background-color: var(--accent-color);
+      border: none;
+      font-weight: 600;
+      padding: 10px 20px;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+    }
+    .btn-success-custom:hover {
+      background-color: #157347;
+      transform: translateY(-1px);
+    }
+    .nav-tabs .nav-link {
+      color: #495057;
+      font-weight: 500;
+    }
+    .nav-tabs .nav-link.active {
+      color: var(--primary-color) !important;
+      font-weight: bold;
+      border-bottom: 3px solid var(--accent-color);
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="navbar navbar-expand-lg navbar-dark mb-4">
+    <div class="container">
+      <a class="navbar-brand fw-bold" href="/"><i class="fa-solid fa-leaf me-2"></i>ChlorophyllAI</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <div class="navbar-nav ms-auto">
+          <a class="nav-link me-3" href="/">Dashboard</a>
+          <a class="nav-link active me-3" href="/prediksi">Analysis</a>
+          <a class="nav-link" href="/history">History</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mb-5">
+    <div class="row g-4">
+      
+      <div class="col-lg-5">
+        <div class="card card-custom p-4 bg-white mb-4">
+          <h4 class="fw-bold text-success mb-3"><i class="fa-solid fa-sliders me-2"></i>Parameter Panel</h4>
+          <hr>
+          
+          <form action="/prediksi" method="POST" enctype="multipart/form-data">
+            <div class="mb-4">
+              <label for="method" class="form-label fw-bold text-dark">ML Regression Algorithm</label>
+              <select class="form-select border-2" id="method" name="method" onchange="toggleIRWarning()">
+                <option value="random_forest" selected>Random Forest Regressor</option>
+              </select>
+            </div>
+
+            <ul class="nav nav-tabs mb-3" id="inputTab" role="tablist">
+              <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="file-tab" data-bs-toggle="tab" data-bs-target="#file-pane" type="button" role="tab" onclick="document.getElementById('input_type').value='file';">Import Excel File</button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="manual-tab" data-bs-toggle="tab" data-bs-target="#manual-pane" type="button" role="tab" onclick="document.getElementById('input_type').value='manual';">Manual Calculation</button>
+              </li>
+            </ul>
+
+            <input type="hidden" id="input_type" name="input_type" value="file">
+
+            <div class="tab-content" id="inputTabContent">
+              <div class="tab-pane fade show active" id="file-pane" role="tabpanel">
+                <div class="mb-3">
+                  <label for="file" class="form-label small text-muted">Upload test dataset document (.xlsx) — needs R, G, B, IR columns (Klorofil_A/B/Total_Klorofil optional, for comparison)
+                  <input class="form-control" type="file" id="file" name="file" accept=".xlsx">
+                </div>
+              </div>
+
+              <div class="tab-pane fade" id="manual-pane" role="tabpanel">
+                <div class="row g-3">
+                  <div class="col-6">
+                    <label class="form-label small fw-bold">R Value (Red)</label>
+                    <input type="number" step="0.01" class="form-control" name="manual_R" value="{{ manual_inputs.R if manual_inputs else 145.20 }}">
+                  </div>
+                  <div class="col-6">
+                    <label class="form-label small fw-bold">G Value (Green)</label>
+                    <input type="number" step="0.01" class="form-control" name="manual_G" value="{{ manual_inputs.G if manual_inputs else 151.40 }}">
+                  </div>
+                  <div class="col-6">
+                    <label class="form-label small fw-bold">B Value (Blue)</label>
+                    <input type="number" step="0.01" class="form-control" name="manual_B" value="{{ manual_inputs.B if manual_inputs else 105.60 }}">
+                  </div>
+                  <div class="col-6" id="manual_ir_container">
+                    <label class="form-label small fw-bold">Infrared Intensity (%)</label>
+                    <input type="number" step="0.01" class="form-control" name="manual_IR" value="{{ manual_inputs.IR if manual_inputs else 76.00 }}">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-success-custom btn-success w-100 mt-4 text-white">
+              <i class="fa-solid fa-wand-magic-sparkles me-2"></i>RUN CHLOROPHYLL PREDICTION
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <div class="col-lg-7">
+        <div class="card card-custom p-4 bg-white">
+          <h4 class="fw-bold text-success mb-3"><i class="fa-solid fa-square-poll-vertical me-2"></i>Analysis Results Dashboard</h4>
+          <hr>
+
+          {% if results %}
+            {% if results[0].error %}
+              <div class="alert alert-danger shadow-sm">{{ results[0].error }}</div>
+            {% else %}
+              
+              <div class="alert alert-success d-flex align-items-center mb-3 py-2 small">
+                <i class="fa-solid fa-circle-check me-2"></i>
+                <div>Successfully processed data source: <strong class="text-dark">{{ filename }}</strong> via <span class="badge bg-dark text-uppercase">{{ method }}</span></div>
+              </div>
+
+              {% if arnon_info %}
+              <div class="card shadow-sm mb-4 border-success-subtle">
+                <div class="card-header bg-success text-white fw-bold small py-2">
+                  <i class="fa-solid fa-square-root-variable me-2"></i> Spectrophotometry Reference Formula (Arnon Method)
+                </div>
+                <div class="card-body bg-light py-3">
+                  <p class="text-secondary small mb-3" style="font-size: 0.85rem;">
+                    Chlorophyll a, b, and Total Chlorophyll are predicted independently by three separate Random Forest models.
+                    Reference: these are the Arnon (1949) spectrophotometric equations used to compute the laboratory
+                    ground-truth values (from real UV-Vis absorbance data) during model training:
+                  </p>
+                  <div class="row text-center g-2">
+                    <div class="col-md-4">
+                      <div class="p-2 bg-white rounded border border-danger-subtle shadow-sm">
+                        <span class="badge bg-danger mb-1" style="font-size: 0.75rem;">Chlorophyll a (Chl a)</span>
+                        <div class="fw-bold text-dark font-monospace small">{{ arnon_info.rumus_a }}</div>
+                      </div>
+                    </div>
+                    <div class="col-md-4">
+                      <div class="p-2 bg-white rounded border border-warning-subtle shadow-sm">
+                        <span class="badge bg-warning text-dark mb-1" style="font-size: 0.75rem;">Chlorophyll b (Chl b)</span>
+                        <div class="fw-bold text-dark font-monospace small">{{ arnon_info.rumus_b }}</div>
+                      </div>
+                    </div>
+                    <div class="col-md-4">
+                      <div class="p-2 bg-white rounded border border-success-subtle shadow-sm">
+                        <span class="badge bg-success mb-1" style="font-size: 0.75rem;">Total Chlorophyll</span>
+                        <div class="fw-bold text-dark font-monospace small">{{ arnon_info.rumus_total }}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {% endif %}
+
+              {% if not ada_ground_truth %}
+              <div class="alert alert-warning small py-2 mb-3">
+                <i class="fa-solid fa-triangle-exclamation me-2"></i>
+                No laboratory ground-truth value is available for this sample (new/unmeasured leaf), so only the
+                predicted chlorophyll values are shown below — no actual-vs-predicted comparison chart.
+              </div>
+              {% endif %}
+
+              <div class="table-responsive rounded border mb-5" style="max-height: 280px;">
+                <table class="table table-bordered table-striped align-middle text-center small mb-0">
+                  <thead class="table-success sticky-top">
+                    <tr>
+                      <th>No</th>
+                      <th>Chlorophyll a <br><small>(mg/L)</small></th>
+                      <th>Chlorophyll b <br><small>(mg/L)</small></th>
+                      <th class="table-primary text-dark">Total Chlorophyll <br><small>(mg/L)</small></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for row in results %}
+                    <tr>
+                      <td>{{ loop.index }}</td>
+                      <td>{{ "%.4f"|format(row.Prediksi_Klorofil_A) }}</td>
+                      <td>{{ "%.4f"|format(row.Prediksi_Klorofil_B) }}</td>
+                      <td class="table-primary fw-bold text-success">{{ "%.4f"|format(row.Prediksi_Total_Klorofil) }}</td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+
+              {% if ada_ground_truth %}
+              <div class="row g-5">
+
+                <div class="col-12">
+                  <h6 class="fw-bold mb-2" style="color: #2E86C1;"><i class="fa-solid fa-chart-column me-2"></i>1. Total Chlorophyll — Actual vs Predicted per Sample</h6>
+                  <div style="height: 340px; position: relative;"><canvas id="chartTotalPerSample"></canvas></div>
+                  <div class="p-3 bg-light border rounded small mt-2 text-secondary shadow-sm" style="text-align: justify;">
+                    <strong>Analysis Pattern Insights:</strong> This chart compares, sample by sample, the laboratory actual value (blue) against the value estimated by the <strong>Random Forest Regressor</strong> (orange) for Total Chlorophyll. The closer the two points are for a given sample, the more accurate the model's estimation.
+                  </div>
+                </div>
+
+                <div class="col-12">
+                  <h6 class="fw-bold mb-2" style="color: #2E86C1;"><i class="fa-solid fa-chart-column me-2"></i>2. Chlorophyll a — Actual vs Predicted per Sample</h6>
+                  <div style="height: 340px; position: relative;"><canvas id="chartAPerSample"></canvas></div>
+                </div>
+
+                <div class="col-12">
+                  <h6 class="fw-bold mb-2" style="color: #2E86C1;"><i class="fa-solid fa-chart-column me-2"></i>3. Chlorophyll b — Actual vs Predicted per Sample</h6>
+                  <div style="height: 340px; position: relative;"><canvas id="chartBPerSample"></canvas></div>
+                  <div class="p-3 bg-light border rounded small mt-2 text-secondary shadow-sm" style="text-align: justify;">
+                    <strong>Cara baca:</strong> titik <strong style="color:#2E86C1;">biru</strong> = nilai Aktual (rumus Arnon dari absorbansi lab), titik <strong style="color:#F39C12;">oranye</strong> = nilai Prediksi (Random Forest). Semakin dekat kedua titik pada 1 sampel, semakin akurat model.
+                  </div>
+                </div>
+
+              </div>
+              {% endif %}
+
+            {% endif %}
+          {% else %}
+            <div class="text-center text-muted py-5">
+              <i class="fa-solid fa-chart-line fa-3x mb-3 text-opacity-25"></i>
+              <p>No simulation data available. Adjust parameters in the left panel and click the prediction button.</p>
+            </div>
+          {% endif %}
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <script>
+    const dataTotal = JSON.parse('{{ (chart_data_total | tojson) if chart_data_total else "[]" }}');
+    const dataA = JSON.parse('{{ (chart_data_a | tojson) if chart_data_a else "[]" }}');
+    const dataB = JSON.parse('{{ (chart_data_b | tojson) if chart_data_b else "[]" }}');
+    const sampleLabels = JSON.parse('{{ (chart_labels | tojson) if chart_labels else "[]" }}');
+
+
+    // ==========================================================================
+    // GRAFIK BARU: Aktual vs Prediksi PER SAMPEL, 2 WARNA (biru=aktual, oranye=prediksi)
+    // Sesuai permintaan dosen pembimbing -- melengkapi grafik korelasi di atas,
+    // bukan menggantikannya. Sumbu-X = nama/urutan sampel, sumbu-Y = nilai klorofil.
+    // ==========================================================================
+    function generatePerSampleChart(canvasId, rawDataPoints, labels, judulY) {
+      if (!rawDataPoints || rawDataPoints.length === 0) return;
+
+      const nilaiAktual = rawDataPoints.map(p => p.x);
+      const nilaiPrediksi = rawDataPoints.map(p => p.y);
+
+      const ctx = document.getElementById(canvasId).getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: 'Aktual (Arnon)',
+              data: nilaiAktual,
+              borderColor: '#2E86C1',
+              backgroundColor: '#2E86C1',
+              pointStyle: 'circle',
+              pointRadius: 6,
+              pointHoverRadius: 8,
+              borderWidth: 1,
+              borderDash: [4, 4],
+              tension: 0
+            },
+            {
+              label: 'Prediksi (Random Forest)',
+              data: nilaiPrediksi,
+              borderColor: '#F39C12',
+              backgroundColor: '#F39C12',
+              pointStyle: 'triangle',
+              pointRadius: 7,
+              pointHoverRadius: 9,
+              borderWidth: 1,
+              borderDash: [4, 4],
+              tension: 0
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: true, position: 'top', labels: { font: { family: 'Segoe UI', size: 11 } } },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return `${context.dataset.label}: ${context.parsed.y.toFixed(3)} mg/L`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: { title: { display: true, text: 'Sampel Tanaman', font: { weight: 'bold', size: 11 } } },
+            y: { title: { display: true, text: judulY, font: { weight: 'bold', size: 11 } }, grid: { color: 'rgba(0,0,0,0.05)' } }
+          }
+        }
+      });
+    }
+
+    // Eksekusi pembuatan chart 2 warna (Aktual vs Prediksi per sampel) - sesuai arahan Bu Ely:
+    // fokus 1 model (Random Forest), tanpa trendline regresi linier terpisah.
+    if (dataTotal.length > 0) {
+      generatePerSampleChart('chartTotalPerSample', dataTotal, sampleLabels, 'Total Chlorophyll (mg/L)');
+      generatePerSampleChart('chartAPerSample', dataA, sampleLabels, 'Chlorophyll a (mg/L)');
+      generatePerSampleChart('chartBPerSample', dataB, sampleLabels, 'Chlorophyll b (mg/L)');
+    }
+
+    function toggleIRWarning() {
+      var select = document.getElementById('method').value;
+      var irInput = document.getElementById('manual_ir_container');
+      if(select === 'random_forest' || select === 'xgboost') {
+        irInput.style.opacity = '1';
+        irInput.style.pointerEvents = 'auto';
+      }
+    }
+    window.onload = toggleIRWarning;
+  </script>
+</body>
+</html>
