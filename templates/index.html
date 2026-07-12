@@ -347,7 +347,7 @@
     function toggleIRWarning() {
       var select = document.getElementById('method').value;
       var irInput = document.getElementById('manual_ir_container');
-      if(select === 'random_forest' || select === 'xgboost') {
+      if(select === 'random_forest') {
         irInput.style.opacity = '1';
         irInput.style.pointerEvents = 'auto';
       }

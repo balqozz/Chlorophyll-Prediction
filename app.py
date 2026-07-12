@@ -85,11 +85,6 @@ init_db()
 
 
 # --- 2. FUNGSI MEMUAT 3 MODEL RANDOM FOREST ---
-# Catatan: opsi XGBoost sudah dihapus dari halaman web karena scope skripsi
-# ini "exclusively Random Forest" (lihat Bab 1.3). Kalau nanti mau
-# menambahkan XGBoost lagi sebagai perbandingan, XGBoost HARUS dilatih ulang
-# dulu memakai 5 fitur [R,G,B,IR,ExG] yang sama seperti Random Forest,
-# supaya konsisten dengan pipeline yang sekarang.
 def load_my_models(method):
     model_total = joblib.load('model_rf_total.pkl')
     model_a = joblib.load('model_rf_a.pkl')
