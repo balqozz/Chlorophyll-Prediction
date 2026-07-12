@@ -126,7 +126,6 @@ def prediksi():
     chart_data_b = []
     chart_labels = []
     filename = ""
-    manual_inputs = None
     ada_ground_truth = False   # True hanya kalau file upload membawa kolom Klorofil_A/B/Total asli
 
     arnon_info = {
@@ -278,51 +277,10 @@ def prediksi():
                 conn.close()
 
             except Exception as e:
-                pred_results = [{"error": f"Gagal memproses file Excel: {str(e)}"}]
-
-        # --- JALUR B: MANUAL INPUT ---
-        elif input_type == 'manual':
-            filename = "Manual Input"
-            try:
-                R_val = float(request.form.get('manual_R', 0))
-                G_val = float(request.form.get('manual_G', 0))
-                B_val = float(request.form.get('manual_B', 0))
-                IR_val = float(request.form.get('manual_IR', 0))
-                ExG_val = (2 * G_val) - R_val - B_val   # sama seperti di notebook
-
-                df_manual = pd.DataFrame([{'R': R_val, 'G': G_val, 'B': B_val,
-                                            'IR': IR_val, 'ExG': ExG_val}])
-
-                model_total, model_a, model_b = load_my_models(method)
-                a_pred = model_a.predict(df_manual[FITUR].values)[0]
-                b_pred = model_b.predict(df_manual[FITUR].values)[0]
-                total_pred = model_total.predict(df_manual[FITUR].values)[0]
-
-                df_manual['Prediksi_Klorofil_A'] = a_pred
-                df_manual['Prediksi_Klorofil_B'] = b_pred
-                df_manual['Prediksi_Total_Klorofil'] = total_pred
-
-                # Tidak ada nilai aktual untuk input manual (daun belum diukur di lab)
-                pred_results = df_manual.to_dict(orient='records')
-
-                # --- JALUR SQLite: SIMPAN MANUAL INPUT ---
-                conn = sqlite3.connect(DB_NAME)
-                cursor = conn.cursor()
-                cursor.execute('''
-                    INSERT INTO history (filename, method, timestamp, chart_data_total, chart_data_a, chart_data_b, results)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                ''', (filename, method, datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                      json.dumps(chart_data_total), json.dumps(chart_data_a), json.dumps(chart_data_b), json.dumps(pred_results)))
-                conn.commit()
-                conn.close()
-
-                manual_inputs = {'R': R_val, 'G': G_val, 'B': B_val, 'IR': IR_val}
-            except Exception as e:
-                pred_results = [{"error": f"Failed to process manual inputs: {str(e)}"}]
-                manual_inputs = None
+                pred_results = [{"error": f"Failed to process Excel file: {str(e)}"}]
 
     return render_template('index.html', results=pred_results, method=method, filename=filename,
-                           manual_inputs=manual_inputs, chart_data_total=chart_data_total,
+                           chart_data_total=chart_data_total,
                            chart_data_a=chart_data_a, chart_data_b=chart_data_b,
                            chart_labels=chart_labels,
                            arnon_info=arnon_info, ada_ground_truth=ada_ground_truth)
@@ -373,4 +331,4 @@ def history_detail(entry_id):
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=False, use_reloader=False)

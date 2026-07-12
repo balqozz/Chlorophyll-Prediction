@@ -89,50 +89,16 @@
           <form action="/prediksi" method="POST" enctype="multipart/form-data">
             <div class="mb-4">
               <label for="method" class="form-label fw-bold text-dark">ML Regression Algorithm</label>
-              <select class="form-select border-2" id="method" name="method" onchange="toggleIRWarning()">
+              <select class="form-select border-2" id="method" name="method">
                 <option value="random_forest" selected>Random Forest Regressor</option>
               </select>
             </div>
 
-            <ul class="nav nav-tabs mb-3" id="inputTab" role="tablist">
-              <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="file-tab" data-bs-toggle="tab" data-bs-target="#file-pane" type="button" role="tab" onclick="document.getElementById('input_type').value='file';">Import Excel File</button>
-              </li>
-              <li class="nav-item" role="presentation">
-                <button class="nav-link" id="manual-tab" data-bs-toggle="tab" data-bs-target="#manual-pane" type="button" role="tab" onclick="document.getElementById('input_type').value='manual';">Manual Calculation</button>
-              </li>
-            </ul>
-
             <input type="hidden" id="input_type" name="input_type" value="file">
 
-            <div class="tab-content" id="inputTabContent">
-              <div class="tab-pane fade show active" id="file-pane" role="tabpanel">
-                <div class="mb-3">
-                  <label for="file" class="form-label small text-muted">Upload test dataset document (.xlsx) — needs R, G, B, IR columns (Klorofil_A/B/Total_Klorofil optional, for comparison)
-                  <input class="form-control" type="file" id="file" name="file" accept=".xlsx">
-                </div>
-              </div>
-
-              <div class="tab-pane fade" id="manual-pane" role="tabpanel">
-                <div class="row g-3">
-                  <div class="col-6">
-                    <label class="form-label small fw-bold">R Value (Red)</label>
-                    <input type="number" step="0.01" class="form-control" name="manual_R" value="{{ manual_inputs.R if manual_inputs else 145.20 }}">
-                  </div>
-                  <div class="col-6">
-                    <label class="form-label small fw-bold">G Value (Green)</label>
-                    <input type="number" step="0.01" class="form-control" name="manual_G" value="{{ manual_inputs.G if manual_inputs else 151.40 }}">
-                  </div>
-                  <div class="col-6">
-                    <label class="form-label small fw-bold">B Value (Blue)</label>
-                    <input type="number" step="0.01" class="form-control" name="manual_B" value="{{ manual_inputs.B if manual_inputs else 105.60 }}">
-                  </div>
-                  <div class="col-6" id="manual_ir_container">
-                    <label class="form-label small fw-bold">Infrared Intensity (%)</label>
-                    <input type="number" step="0.01" class="form-control" name="manual_IR" value="{{ manual_inputs.IR if manual_inputs else 76.00 }}">
-                  </div>
-                </div>
-              </div>
+            <div class="mb-3">
+              <label for="file" class="form-label small text-muted">Upload test dataset document (.xlsx) — needs R, G, B, IR columns (Klorofil_A/B/Total_Klorofil optional, for comparison)
+              <input class="form-control" type="file" id="file" name="file" accept=".xlsx">
             </div>
 
             <button type="submit" class="btn btn-success-custom btn-success w-100 mt-4 text-white">
@@ -143,6 +109,7 @@
       </div>
 
       <div class="col-lg-7">
+
         <div class="card card-custom p-4 bg-white">
           <h4 class="fw-bold text-success mb-3"><i class="fa-solid fa-square-poll-vertical me-2"></i>Analysis Results Dashboard</h4>
           <hr>
@@ -343,16 +310,6 @@
       generatePerSampleChart('chartBPerSample', dataB, sampleLabels, 'Chlorophyll b');
       generatePerSampleChart('chartTotalPerSample', dataTotal, sampleLabels, 'Total Chlorophyll');
     }
-
-    function toggleIRWarning() {
-      var select = document.getElementById('method').value;
-      var irInput = document.getElementById('manual_ir_container');
-      if(select === 'random_forest') {
-        irInput.style.opacity = '1';
-        irInput.style.pointerEvents = 'auto';
-      }
-    }
-    window.onload = toggleIRWarning;
   </script>
 </body>
 </html>
