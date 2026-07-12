@@ -80,12 +80,12 @@
 
   <div class="container mb-5">
     <div class="row g-4">
-      
+
       <div class="col-lg-5">
         <div class="card card-custom p-4 bg-white mb-4">
           <h4 class="fw-bold text-success mb-3"><i class="fa-solid fa-sliders me-2"></i>Parameter Panel</h4>
           <hr>
-          
+
           <form action="/prediksi" method="POST" enctype="multipart/form-data">
             <div class="mb-4">
               <label for="method" class="form-label fw-bold text-dark">ML Regression Algorithm</label>
@@ -151,7 +151,7 @@
             {% if results[0].error %}
               <div class="alert alert-danger shadow-sm">{{ results[0].error }}</div>
             {% else %}
-              
+
               <div class="alert alert-success d-flex align-items-center mb-3 py-2 small">
                 <i class="fa-solid fa-circle-check me-2"></i>
                 <div>Successfully processed data source: <strong class="text-dark">{{ filename }}</strong> via <span class="badge bg-dark text-uppercase">{{ method }}</span></div>
@@ -205,9 +205,9 @@
                   <thead class="table-success sticky-top">
                     <tr>
                       <th>No</th>
-                      <th>Chlorophyll a <br><small>(mg/L)</small></th>
-                      <th>Chlorophyll b <br><small>(mg/L)</small></th>
-                      <th class="table-primary text-dark">Total Chlorophyll <br><small>(mg/L)</small></th>
+                      <th>Chlorophyll a <br></th>
+                      <th>Chlorophyll b <br></th>
+                      <th class="table-primary text-dark">Total Chlorophyll <br></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -243,7 +243,7 @@
                   <h6 class="fw-bold mb-2" style="color: #2E86C1;"><i class="fa-solid fa-chart-column me-2"></i>3. Chlorophyll b — Actual vs Predicted per Sample</h6>
                   <div style="height: 340px; position: relative;"><canvas id="chartBPerSample"></canvas></div>
                   <div class="p-3 bg-light border rounded small mt-2 text-secondary shadow-sm" style="text-align: justify;">
-                    <strong>Cara baca:</strong> titik <strong style="color:#2E86C1;">biru</strong> = nilai Aktual (rumus Arnon dari absorbansi lab), titik <strong style="color:#F39C12;">oranye</strong> = nilai Prediksi (Random Forest). Semakin dekat kedua titik pada 1 sampel, semakin akurat model.
+                    <strong>Keterangan:</strong> titik <strong style="color:#2E86C1;">biru</strong> = nilai Aktual (rumus Arnon dari absorbansi lab), titik <strong style="color:#F39C12;">oranye</strong> = nilai Prediksi (Random Forest). Semakin dekat kedua titik pada 1 sampel, semakin akurat model.
                   </div>
                 </div>
 
@@ -266,7 +266,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  
+
   <script>
     const dataTotal = JSON.parse('{{ (chart_data_total | tojson) if chart_data_total else "[]" }}');
     const dataA = JSON.parse('{{ (chart_data_a | tojson) if chart_data_a else "[]" }}');
@@ -275,9 +275,7 @@
 
 
     // ==========================================================================
-    // GRAFIK BARU: Aktual vs Prediksi PER SAMPEL, 2 WARNA (biru=aktual, oranye=prediksi)
-    // Sesuai permintaan dosen pembimbing -- melengkapi grafik korelasi di atas,
-    // bukan menggantikannya. Sumbu-X = nama/urutan sampel, sumbu-Y = nilai klorofil.
+    // GRAFIK: Aktual vs Prediksi PER SAMPEL, 2 WARNA (biru=aktual, oranye=prediksi)
     // ==========================================================================
     function generatePerSampleChart(canvasId, rawDataPoints, labels, judulY) {
       if (!rawDataPoints || rawDataPoints.length === 0) return;
@@ -325,7 +323,7 @@
             tooltip: {
               callbacks: {
                 label: function(context) {
-                  return `${context.dataset.label}: ${context.parsed.y.toFixed(3)} mg/L`;
+                  return `${context.dataset.label}: ${context.parsed.y.toFixed(3)}`;
                 }
               }
             }
@@ -338,12 +336,12 @@
       });
     }
 
-    // Eksekusi pembuatan chart 2 warna (Aktual vs Prediksi per sampel) - sesuai arahan Bu Ely:
+    // Eksekusi pembuatan chart 2 warna (Aktual vs Prediksi per sampel):
     // fokus 1 model (Random Forest), tanpa trendline regresi linier terpisah.
     if (dataTotal.length > 0) {
-      generatePerSampleChart('chartTotalPerSample', dataTotal, sampleLabels, 'Total Chlorophyll (mg/L)');
-      generatePerSampleChart('chartAPerSample', dataA, sampleLabels, 'Chlorophyll a (mg/L)');
-      generatePerSampleChart('chartBPerSample', dataB, sampleLabels, 'Chlorophyll b (mg/L)');
+      generatePerSampleChart('chartAPerSample', dataA, sampleLabels, 'Chlorophyll a');
+      generatePerSampleChart('chartBPerSample', dataB, sampleLabels, 'Chlorophyll b');
+      generatePerSampleChart('chartTotalPerSample', dataTotal, sampleLabels, 'Total Chlorophyll');
     }
 
     function toggleIRWarning() {
