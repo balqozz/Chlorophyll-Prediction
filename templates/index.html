@@ -157,8 +157,41 @@
                   </div>
                 </div>
               </div>
+
+              <h5 class="fw-bold text-primary mb-3">
+                  Actual Result (Arnon Method)
+              </h5>
+
+              <div class="table-responsive rounded border mb-4">
+              <table class="table table-bordered table-striped text-center mb-0">
+              <thead class="table-primary">
+              <tr>
+                  <th>Label</th>
+                  <th>Chlorophyll a</th>
+                  <th>Chlorophyll b</th>
+                  <th>Total Chlorophyll</th>
+              </tr>
+              </thead>
+
+              <tbody>
+
+              {% for row in results %}
+              <tr>
+              <td>{{ row.Perlakuan }}</td>
+              <td>{{ "%.4f"|format(row.Klorofil_A) }}</td>
+              <td>{{ "%.4f"|format(row.Klorofil_B) }}</td>
+              <td>{{ "%.4f"|format(row.Total_Klorofil) }}</td>
+              </tr>
+              {% endfor %}
+
+              </tbody>
+              </table>
+              </div>
               {% endif %}
 
+              <h5 class="fw-bold text-success mb-3">
+                  Predicted Result (Random Forest)
+              </h5>
               {% if not ada_ground_truth %}
               <div class="alert alert-warning small py-2 mb-3">
                 <i class="fa-solid fa-triangle-exclamation me-2"></i>
@@ -169,23 +202,23 @@
 
               <div class="table-responsive rounded border mb-5" style="max-height: 280px;">
                 <table class="table table-bordered table-striped align-middle text-center small mb-0">
-                  <thead class="table-success sticky-top">
+                  <thead class="table-success">
                     <tr>
-                      <th>No</th>
-                      <th>Chlorophyll a <br></th>
-                      <th>Chlorophyll b <br></th>
-                      <th class="table-primary text-dark">Total Chlorophyll <br></th>
+                      <th>Label</th>
+                      <th>Chlorophyll a</th>
+                      <th>Chlorophyll b</th>
+                      <th>Total Chlorophyll</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {% for row in results %}
+                  {% for row in results %}
                     <tr>
-                      <td>{{ loop.index }}</td>
+                      <td>{{ row.Perlakuan }}</td>
                       <td>{{ "%.4f"|format(row.Prediksi_Klorofil_A) }}</td>
                       <td>{{ "%.4f"|format(row.Prediksi_Klorofil_B) }}</td>
-                      <td class="table-primary fw-bold text-success">{{ "%.4f"|format(row.Prediksi_Total_Klorofil) }}</td>
+                      <td>{{ "%.4f"|format(row.Prediksi_Total_Klorofil) }}</td>
                     </tr>
-                    {% endfor %}
+                  {% endfor %}
                   </tbody>
                 </table>
               </div>
@@ -194,23 +227,23 @@
               <div class="row g-5">
 
                 <div class="col-12">
-                  <h6 class="fw-bold mb-2" style="color: #2E86C1;"><i class="fa-solid fa-chart-column me-2"></i>1. Total Chlorophyll — Actual vs Predicted per Sample</h6>
-                  <div style="height: 340px; position: relative;"><canvas id="chartTotalPerSample"></canvas></div>
+                  <h6 class="fw-bold mb-2" style="color: #2E86C1;"><i class="fa-solid fa-chart-column me-2"></i>1. Total Chlorophyll — Actual vs Predicted per Label</h6>
+                  <div style="height: 340px; position: relative;"><canvas id="chartTotalPerLabel"></canvas></div>
                   <div class="p-3 bg-light border rounded small mt-2 text-secondary shadow-sm" style="text-align: justify;">
-                    <strong>Analysis Pattern Insights:</strong> This chart compares, sample by sample, the laboratory actual value (blue) against the value estimated by the <strong>Random Forest Regressor</strong> (orange) for Total Chlorophyll. The closer the two points are for a given sample, the more accurate the model's estimation.
+                    <strong>Analysis Pattern Insights:</strong> This chart compares, label by label, the laboratory actual value (blue) against the value estimated by the <strong>Random Forest Regressor</strong> (orange) for Total Chlorophyll. The closer the two points are for a given label, the more accurate the model's estimation.
                   </div>
                 </div>
 
                 <div class="col-12">
-                  <h6 class="fw-bold mb-2" style="color: #2E86C1;"><i class="fa-solid fa-chart-column me-2"></i>2. Chlorophyll a — Actual vs Predicted per Sample</h6>
-                  <div style="height: 340px; position: relative;"><canvas id="chartAPerSample"></canvas></div>
+                  <h6 class="fw-bold mb-2" style="color: #2E86C1;"><i class="fa-solid fa-chart-column me-2"></i>2. Chlorophyll a — Actual vs Predicted per Label</h6>
+                  <div style="height: 340px; position: relative;"><canvas id="chartAPerLabel"></canvas></div>
                 </div>
 
                 <div class="col-12">
-                  <h6 class="fw-bold mb-2" style="color: #2E86C1;"><i class="fa-solid fa-chart-column me-2"></i>3. Chlorophyll b — Actual vs Predicted per Sample</h6>
-                  <div style="height: 340px; position: relative;"><canvas id="chartBPerSample"></canvas></div>
+                  <h6 class="fw-bold mb-2" style="color: #2E86C1;"><i class="fa-solid fa-chart-column me-2"></i>3. Chlorophyll b — Actual vs Predicted per Label</h6>
+                  <div style="height: 340px; position: relative;"><canvas id="chartBPerLabel"></canvas></div>
                   <div class="p-3 bg-light border rounded small mt-2 text-secondary shadow-sm" style="text-align: justify;">
-                    <strong>Keterangan:</strong> titik <strong style="color:#2E86C1;">biru</strong> = nilai Aktual (rumus Arnon dari absorbansi lab), titik <strong style="color:#F39C12;">oranye</strong> = nilai Prediksi (Random Forest). Semakin dekat kedua titik pada 1 sampel, semakin akurat model.
+                    <strong>Keterangan:</strong> titik <strong style="color:#2E86C1;">biru</strong> = nilai Aktual (rumus Arnon dari absorbansi lab), titik <strong style="color:#F39C12;">oranye</strong> = nilai Prediksi (Random Forest). Semakin dekat kedua titik pada 1 label, semakin akurat model.
                   </div>
                 </div>
 
@@ -242,9 +275,9 @@
 
 
     // ==========================================================================
-    // GRAFIK: Aktual vs Prediksi PER SAMPEL, 2 WARNA (biru=aktual, oranye=prediksi)
+    // GRAFIK: Aktual vs Prediksi PER LABEL, 2 WARNA (biru=aktual, oranye=prediksi)
     // ==========================================================================
-    function generatePerSampleChart(canvasId, rawDataPoints, labels, judulY) {
+    function generatePerLabelChart(canvasId, rawDataPoints, labels, judulY) {
       if (!rawDataPoints || rawDataPoints.length === 0) return;
 
       const nilaiAktual = rawDataPoints.map(p => p.x);
@@ -296,19 +329,19 @@
             }
           },
           scales: {
-            x: { title: { display: true, text: 'Sampel Tanaman', font: { weight: 'bold', size: 11 } } },
+            x: { title: { display: true, text: 'Label Perlakuan', font: { weight: 'bold', size: 11 } } },
             y: { title: { display: true, text: judulY, font: { weight: 'bold', size: 11 } }, grid: { color: 'rgba(0,0,0,0.05)' } }
           }
         }
       });
     }
 
-    // Eksekusi pembuatan chart 2 warna (Aktual vs Prediksi per sampel):
+    // Eksekusi pembuatan chart 2 warna (Aktual vs Prediksi per label):
     // fokus 1 model (Random Forest), tanpa trendline regresi linier terpisah.
     if (dataTotal.length > 0) {
-      generatePerSampleChart('chartAPerSample', dataA, sampleLabels, 'Chlorophyll a');
-      generatePerSampleChart('chartBPerSample', dataB, sampleLabels, 'Chlorophyll b');
-      generatePerSampleChart('chartTotalPerSample', dataTotal, sampleLabels, 'Total Chlorophyll');
+      generatePerLabelChart('chartAPerLabel', dataA, sampleLabels, 'Chlorophyll a');
+      generatePerLabelChart('chartBPerLabel', dataB, sampleLabels, 'Chlorophyll b');
+      generatePerLabelChart('chartTotalPerLabel', dataTotal, sampleLabels, 'Total Chlorophyll');
     }
   </script>
 </body>

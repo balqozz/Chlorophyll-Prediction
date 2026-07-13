@@ -15,6 +15,22 @@ DB_NAME = 'skripsi_online.db'  # <-- Nama file database kamu
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
 
+# ==========================================================================
+# CATATAN PERBAIKAN (supaya sinkron dengan notebook ekstraksi terbaru):
+# - Model sekarang dilatih dengan 5 FITUR SAJA: R, G, B, IR, ExG (skala
+#   MENTAH, bukan dinormalisasi 0-1, dan TANPA rasio IR_to_R/G/B). Fitur
+#   lama (r,g,b normalisasi + Excess_Green skala kecil + IR_to_R/G/B) sudah
+#   tidak dipakai lagi -- kalau tetap dipakai, jumlah fitur akan mismatch
+#   dengan model_rf_a.pkl / model_rf_b.pkl / model_rf_total.pkl yang baru.
+# - "Aktual" klorofil TIDAK LAGI direka dari rumus IR/97/98 + rasio
+#   72,05%/27,95%. Nilai aktual yang benar hanya ada kalau file yang
+#   diupload memang membawa kolom ground truth asli (Klorofil_A,
+#   Klorofil_B, Total_Klorofil), hasil dari rumus Arnon berbasis
+#   absorbansi lab (lihat notebook -> Ground_Truth_Absorbansi_Arnon.xlsx).
+#   Untuk sampel baru yang belum pernah diukur di lab, sistem HANYA
+#   menampilkan prediksi (tanpa nilai aktual palsu).
+# ==========================================================================
+
 FITUR = ['R', 'G', 'B', 'IR', 'ExG']
 
 # ==========================================================================
@@ -227,54 +243,28 @@ def prediksi():
                 df['Prediksi_Klorofil_B'] = model_b.predict(df[FITUR].values)
                 df['Prediksi_Total_Klorofil'] = model_total.predict(df[FITUR].values)
 
-                # Agregasi hasil menjadi PER LABEL (sesuai RF_new.ipynb)
-
-                df_per_label = (
-                    df.groupby("Perlakuan", as_index=False)
-                    .agg({
-                        "Klorofil_A": "mean",
-                        "Prediksi_Klorofil_A": "mean",
-
-                        "Klorofil_B": "mean",
-                        "Prediksi_Klorofil_B": "mean",
-
-                        "Total_Klorofil": "mean",
-                        "Prediksi_Total_Klorofil": "mean",
-
-                        "ExG": "mean"
-                    })
-                    .sort_values("Perlakuan")
-                )
-
-                # Label sumbu-X untuk grafik per-label (2 warna): pakai
-                chart_labels = [
-                    f"Label {int(x)}"
-                    for x in df_per_label["Perlakuan"]
-                ]
+                # Label sumbu-X untuk grafik per-sampel (2 warna): pakai
+                # Nama_File kalau ada, kalau tidak pakai nomor urut sampel.
+                if 'Nama_File' in df.columns:
+                    chart_labels = df['Nama_File'].astype(str).tolist()
+                else:
+                    chart_labels = [filename if len(df) == 1 else f"Sampel {i+1}" for i in range(len(df))]
 
                 # Ground truth HANYA dipakai kalau memang ada di file upload
                 # atau berhasil ditemukan otomatis di atas
                 if all(k in df.columns for k in ['Klorofil_A', 'Klorofil_B', 'Total_Klorofil']) and \
                         df[['Klorofil_A', 'Klorofil_B', 'Total_Klorofil']].notna().all().all():
                     ada_ground_truth = True
+                    for idx, row in df.iterrows():
+                        chart_data_a.append({'x': round(float(row['Klorofil_A']), 4),
+                                              'y': round(float(row['Prediksi_Klorofil_A']), 4)})
+                        chart_data_b.append({'x': round(float(row['Klorofil_B']), 4),
+                                              'y': round(float(row['Prediksi_Klorofil_B']), 4)})
+                        chart_data_total.append({'x': round(float(row['Total_Klorofil']), 4),
+                                                  'y': round(float(row['Prediksi_Total_Klorofil']), 4)})
 
-                    for _, row in df_per_label.iterrows():
+                pred_results = df.to_dict(orient='records')
 
-                        chart_data_a.append({
-                            "x": round(float(row["Klorofil_A"]),4),
-                            "y": round(float(row["Prediksi_Klorofil_A"]),4)
-                        })
-
-                        chart_data_b.append({
-                            "x": round(float(row["Klorofil_B"]),4),
-                            "y": round(float(row["Prediksi_Klorofil_B"]),4)
-                        })
-
-                        chart_data_total.append({
-                            "x": round(float(row["Total_Klorofil"]),4),
-                            "y": round(float(row["Prediksi_Total_Klorofil"]),4)
-                        })
-                pred_results = df_per_label.to_dict(orient="records")
                 # --- JALUR SQLite: SIMPAN REKORD BARU ---
                 conn = sqlite3.connect(DB_NAME)
                 cursor = conn.cursor()
